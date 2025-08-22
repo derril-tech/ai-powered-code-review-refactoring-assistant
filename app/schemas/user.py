@@ -34,6 +34,14 @@ class UserUpdate(BaseModel):
     notification_email: Optional[bool] = None
     notification_webhook: Optional[bool] = None
 
+class UserUpdateRequest(BaseModel):
+    """Schema for user profile update requests."""
+    full_name: Optional[str] = Field(None, max_length=255)
+    bio: Optional[str] = Field(None, max_length=1000)
+    preferred_language: Optional[SupportedLanguage] = None
+    notification_email: Optional[bool] = None
+    notification_webhook: Optional[bool] = None
+
 class UserLogin(BaseModel):
     """Schema for user login."""
     email: EmailStr

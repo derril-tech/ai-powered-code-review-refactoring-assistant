@@ -16,6 +16,15 @@ class AnalysisCreate(AnalysisBase):
     """Schema for creating a new analysis."""
     pass
 
+class AnalysisRequest(BaseModel):
+    """Schema for analysis request."""
+    repo_url: Optional[str] = Field(None, description="Repository URL")
+    branch: Optional[str] = Field("main", description="Branch to analyze")
+    commit_sha: Optional[str] = Field(None, description="Commit SHA to analyze")
+    language: SupportedLanguage
+    analysis_type: AnalysisType = AnalysisType.FULL
+    custom_rules: Optional[Dict[str, Any]] = None
+
 class AnalysisUpdate(BaseModel):
     """Schema for updating analysis."""
     status: Optional[AnalysisStatus] = None
