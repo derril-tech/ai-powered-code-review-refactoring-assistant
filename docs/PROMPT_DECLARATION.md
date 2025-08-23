@@ -231,6 +231,90 @@ You are working on the **AI-Powered Code Review and Refactoring Assistant**, a c
 - "How should we handle the error case where the AI service is unavailable?"
 - "What's the preferred approach for handling large file uploads?"
 
+## 📝 Response Format Guidelines
+
+### **Code Changes**
+When making code changes, provide them in a clear diff format:
+
+```diff
+// Example: Adding a new API endpoint
++ from fastapi import APIRouter, Depends, HTTPException
++ from app.schemas.analysis import AnalysisCreate, AnalysisResponse
++ from app.services.analysis import AnalysisService
++ 
++ router = APIRouter()
++ 
++ @router.post("/analyses", response_model=AnalysisResponse)
++ async def create_analysis(
++     analysis: AnalysisCreate,
++     service: AnalysisService = Depends()
++ ):
++     """Create a new code analysis."""
++     return await service.create_analysis(analysis)
+```
+
+### **File Creation**
+When creating new files, specify the complete file path and content:
+
+```typescript
+// apps/frontend/components/ui/input.tsx
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, ...props }, ref) => {
+    return (
+      <input
+        type={type}
+        className={cn(
+          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          className
+        )}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Input.displayName = "Input"
+
+export { Input }
+```
+
+### **Configuration Changes**
+When updating configuration files, show the specific changes:
+
+```yaml
+# docker-compose.yml
+services:
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+```
+
+### **Documentation Updates**
+When updating documentation, provide the specific sections to change:
+
+```markdown
+## New Feature: Repository Analysis
+
+### Overview
+Users can now connect their Git repositories for automated code analysis.
+
+### API Endpoints
+- `POST /api/v1/repositories` - Connect a new repository
+- `GET /api/v1/repositories` - List connected repositories
+- `DELETE /api/v1/repositories/{id}` - Remove repository connection
+```
+
 ---
 
 **Remember**: This is a production application that will be used by real developers. Every decision should prioritize security, performance, and user experience. When in doubt, ask for clarification rather than making assumptions.

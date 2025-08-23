@@ -1,9 +1,27 @@
 version: '3.8'
 
 services:
-  # FastAPI Application
-  app:
-    build: .
+  # Frontend Application
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+  # Backend API Application
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -14,6 +32,7 @@ services:
       - postgres
       - redis
     volumes:
+      - ./apps/backend:/app
       - ./logs:/app/logs
     restart: unless-stopped
     healthcheck:
@@ -57,7 +76,9 @@ services:
 
   # Arq Worker for Background Jobs
   worker:
-    build: .
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
     command: arq app.workers.arq_worker.WorkerSettings
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/code_review_db
@@ -67,6 +88,7 @@ services:
       - postgres
       - redis
     volumes:
+      - ./apps/backend:/app
       - ./logs:/app/logs
     restart: unless-stopped
 

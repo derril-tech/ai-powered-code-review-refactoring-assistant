@@ -2,27 +2,85 @@
 
 ## 🎯 Project Overview
 
-**AI-Powered Code Review and Refactoring Assistant** is an intelligent, automated tool designed to revolutionize the software development lifecycle. By leveraging advanced AI and machine learning, it provides developers with instant, actionable feedback on their code, significantly accelerating the code review process and enhancing overall code quality.
+**RefactorIQ™ - AI Code Review & Refactoring Autopilot** is an intelligent, automated tool designed to revolutionize the software development lifecycle. By leveraging advanced AI and machine learning, it provides developers with confidence-scored auto-fixes, test patches, and one-click apply capabilities, significantly accelerating the code review process and enhancing overall code quality.
+
+### **Product Vision**
+- **Meta-leverage**: Every suggestion improves many future diffs
+- **Context-aware**: Understands intent, patterns, and project standards (not just lint rules)
+- **Safe by design**: Confidence-scored fixes, tests-first patches, and gated rollouts
+- **Seamless fit**: PR comments, status checks, and one-click apply via bot or IDE
+
+### **Demo Flow (90 seconds)**
+1. Push a branch → GitHub webhook triggers /analyses job
+2. Streaming WebSocket shows progress (parsing → embeddings → LLM eval → proposals)
+3. PR gets a findings summary comment + inline suggestions
+4. Click "Create Fix PR" to open bot PR with atomic commits + tests
+5. Merge → dashboards update Code Health, MTTR, and Hotspots metrics
 
 ### **Tech Stack**
-- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS, Radix UI
-- **Backend**: FastAPI, Python 3.11+, SQLAlchemy 2.0, PostgreSQL
-- **AI Services**: OpenAI GPT-4, Anthropic Claude
-- **Real-time**: WebSocket, Redis
-- **Deployment**: Docker, Docker Compose
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, Radix UI, Zustand + TanStack Query, Framer Motion
+- **Backend**: FastAPI (async), SQLAlchemy 2.0 (async), Alembic, JWT w/ refresh rotation, Redis rate-limiting and cache, WebSockets, Arq workers
+- **Database**: PostgreSQL 15 + pgvector (1536d) for embeddings, S3-compatible storage via presigned URLs
+- **AI Services**: LangChain with GPT-4 (general, refactor planning) + Claude 3 (long-context reasoning, standards alignment), OpenAI embeddings for semantic search
+- **Integrations**: GitHub/GitLab webhooks (HMAC verified), Bitbucket optional
+- **Deployment**: Docker images, health checks, Vercel (FE), Render (BE), auto migrations, JSON logging
 
 ### **Target Users**
-- Software developers and development teams
-- Code reviewers and quality assurance engineers
-- DevOps engineers and security professionals
-- Open source maintainers and contributors
+- Development teams using GitHub/GitLab for PR-based workflows
+- Code reviewers seeking automated assistance with confidence-scored suggestions
+- DevOps teams requiring CI/CD integration with status checks and A/B testing
+- Enterprise organizations with security compliance needs (OWASP/ASVS, SAST patterns)
+- Open source maintainers with high PR volume and quality standards
 
 ### **Core Goals**
-1. Provide intelligent, context-aware code analysis
-2. Automate repetitive code review tasks
-3. Detect security vulnerabilities and performance issues
-4. Suggest and apply automated refactoring
-5. Integrate seamlessly with existing development workflows
+1. Provide confidence-scored auto-fixes with test patches and architectural integrity analysis
+2. Integrate with GitHub/GitLab for PR-based analysis with webhook processing
+3. Enable one-click apply via bot or IDE with atomic commits and tests
+4. Deliver advanced AI analysis (security, performance, code smells, dead code, complexity)
+5. Support CI/CD integration with status checks, required gates, and A/B compare vs baseline
+
+### **Core Capabilities**
+
+#### **Intelligent Code Analysis**
+- **Multi-language Support**: Python, JS/TS, Go, Java, C#, Rust, PHP, Ruby, Swift, Kotlin, Scala
+- **Advanced Detection**: Code smells, bugs, dead code, complexity, duplication, API misuse
+- **Architectural Analysis**: Layering, boundaries, cyclic dependencies, cohesion/coupling maps
+
+#### **Security & Secrets**
+- **OWASP/ASVS Compliance**: SAST patterns, SSRF/SQLi/XSS detection
+- **Secret Detection**: API keys, passwords, tokens, credentials
+- **Dependency Analysis**: Security advisories, vulnerability scanning
+- **Compliance Reporting**: GDPR, SOC2, security audit trails
+
+#### **Performance Optimization**
+- **Algorithm Analysis**: N+1 queries, hot loops, memory allocations
+- **I/O Optimization**: Blocking operations, async/await conversions
+- **Structural Improvements**: Module split/merge, code organization
+- **Performance Metrics**: Response time analysis, resource usage
+
+#### **Auto-Refactors**
+- **Confidence Scoring**: AI-powered confidence assessment for each suggestion
+- **Test-First Patches**: Generate test cases before applying fixes
+- **Atomic Commits**: Structured, reviewable changes with clear descriptions
+- **Refactoring Types**: Extract method, inline variable, simplify conditionals, async conversions
+
+#### **Repository Integration**
+- **GitHub App**: Seamless integration with GitHub repositories and PRs
+- **GitLab Support**: Full GitLab integration with merge requests
+- **Webhook Processing**: Real-time analysis triggers on code changes
+- **Branch Analysis**: Support for feature branches, PR comparisons
+
+#### **Enterprise Features**
+- **CI/CD Integration**: Status checks, required gates, A/B testing
+- **Bot Integration**: Automated PR creation, comments, and labeling
+- **Analytics Dashboard**: Code health scores, MTTR, PR cycle time metrics
+- **Team Management**: Organization settings, role-based access control
+
+#### **Developer Experience**
+- **IDE Extensions**: VS Code/JetBrains plugins for inline previews
+- **CLI Tools**: `riq scan`, `riq diff`, `riq apply --proposal <id>`
+- **Configuration**: `.refactoriq.yml` for org rules, severity mapping
+- **Real-time Updates**: WebSocket streaming for analysis progress
 
 ---
 
@@ -266,30 +324,82 @@ npm test
 ## 🧠 Contextual Knowledge
 
 ### **Domain Rules**
-1. **Analysis Types**: full, security, performance, style, documentation
-2. **Finding Severity**: critical, high, medium, low
+1. **Analysis Types**: full, security, performance, style, documentation, architectural
+2. **Finding Severity**: critical, high, medium, low, info
 3. **Supported Languages**: Python, JavaScript, TypeScript, Java, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, Scala
-4. **User Roles**: Regular users, Premium users, Administrators
+4. **User Roles**: Regular users, Premium users, Administrators, Organization owners
+5. **Confidence Levels**: high (90%+), medium (70-89%), low (50-69%), experimental (<50%)
+6. **Repository Providers**: GitHub, GitLab, Bitbucket
+7. **Proposal Categories**: security, performance, refactoring, style, documentation, architectural
+
+### **Data Model (High Level)**
+- **users** (id UUID, email unique, org_id, role, soft_delete)
+- **repos** (id, provider, external_id, default_branch, settings_json)
+- **analyses** (id, repo_id, pr_number/null, status, language_set, started_at/finished_at)
+- **files** (id, repo_id, path, hash, content_ref)
+- **chunks** (id, file_id, span, embedding vector(1536))
+- **findings** (id, analysis_id, file_id, severity, rule_id, message, span, confidence)
+- **proposals** (id, finding_id, patch_diff, test_patch_diff, confidence, category)
+- **events** (id, analysis_id, type, payload_json, created_at)
+- **tokens** (access/refresh tracking for rotation + revoke)
+- **audit_logs** (who did what, when, where)
+
+### **API Surface (REST)**
+- `POST /v1/auth/login` → JWT (15m) & refresh (7d)
+- `POST /v1/repos` → connect repo (GitHub app handshake)
+- `POST /v1/analyses` → start analysis {repo_id, ref\|pr}
+- `GET /v1/analyses/{id}` → status + aggregates (paginated findings)
+- `GET /v1/findings?analysis_id=…&page=1&size=50` (max 100)
+- `POST /v1/proposals/{id}/apply` → enqueue bot PR or patch
+- `WS /v1/analyses/{id}/stream` → phases: queued→parsing→embedding→llm_eval→proposing→done
 
 ### **Business Logic**
-- **Authentication**: JWT with refresh token rotation
-- **File Processing**: Secure upload with virus scanning
-- **AI Analysis**: Async processing with progress tracking
-- **Notifications**: Email and webhook notifications
-- **Rate Limiting**: Per-endpoint and per-user limits
+- **Authentication**: JWT with refresh token rotation (15m access, 7d refresh)
+- **Repository Integration**: GitHub App authentication, webhook signature verification
+- **AI Analysis**: Async processing with confidence scoring and test patch generation
+- **Proposal System**: Auto-fix generation with confidence-based gating
+- **Bot Integration**: Automated PR creation with atomic commits and tests
+- **CI/CD Integration**: Status checks, required gates, A/B testing
+- **Analytics**: Code health scoring, MTTR tracking, PR cycle time metrics
+- **Rate Limiting**: Global 100/min, login 5/min, analysis 10/hour
+- **Security**: Secrets redaction, AES-256 encryption, GDPR compliance
 
 ### **Security Considerations**
-- **Input Validation**: All user inputs must be validated
-- **SQL Injection**: Use parameterized queries only
+- **Input Validation**: All user inputs must be validated with Pydantic v2
+- **SQL Injection**: Use SQLAlchemy async with parameterized queries only
 - **XSS Protection**: Sanitize all user-generated content
-- **File Upload**: Validate file types and scan for malware
-- **API Security**: Rate limiting, CORS, authentication
+- **Webhook Security**: HMAC signature verification for GitHub/GitLab webhooks
+- **Secrets Management**: Redaction at ingest, AES-256 at rest, TLS in transit
+- **Repository Access**: Principle of least privilege with scoped repo tokens
+- **GDPR Compliance**: Data retention policies, right-to-erasure, soft delete + purge
+- **API Security**: Rate limiting, CORS allow-list, JWT with device/session revoke
+- **File Upload**: Validate file types, scan for malware, S3-compatible storage
 
 ### **Performance Requirements**
-- **API Response Time**: < 200ms for simple operations
-- **Analysis Processing**: < 5 minutes for typical repositories
+- **API Response Time**: p95 < 200ms for simple operations
+- **Database Queries**: Complex queries < 50ms with proper indexing
+- **WebSocket Performance**: First finding < 5s on medium PRs (~1k LOC changed)
+- **Worker Throughput**: 100 concurrent analyses / node (autoscale)
+- **Uptime**: 99.9% with health/readiness probes and circuit breakers
+- **Caching Strategy**: Sessions (7d TTL), hot analysis aggregates (1h TTL), embeddings index cached map
+- **Rate Limiting**: Redis sliding window implementation
 - **Frontend Load Time**: < 3 seconds for initial page load
-- **Database Queries**: Optimized with proper indexing
+
+### **Brand & UI Kit**
+- **Product Name**: RefactorIQ™
+- **Taglines**: "Make every PR your best PR", "From code smell to ship-ready in minutes"
+- **Colors**: Primary blue (#3b82f6), Success green (#22c55e), Warning orange (#f59e0b), Error red (#ef4444)
+- **Typography**: UI — Inter; Code — JetBrains Mono
+- **Layouts**: Dashboard layout with header, sidebar, main content; Analysis layout with upload, progress, results
+- **Badges**: Severity-based styling (critical, high, medium, low, info)
+- **Accessibility**: WCAG 2.1 AA compliance, focus rings, keyboard navigation, screen reader support
+
+### **Analytics & KPIs**
+- **Code Health Score**: Complexity, duplication, churn metrics
+- **MTTR**: Mean time to resolution for code issues
+- **Auto-fix Metrics**: Percentage of auto-fixes merged, regression rate
+- **PR Performance**: Cycle time reduction, reviewer load saved, hotspot mapping
+- **Quality Metrics**: Finding acceptance rate by category, false-positive trend analysis
 
 ---
 
@@ -376,28 +486,45 @@ This is bad because:
 ### **Code Quality**
 - [ ] All functions have type hints
 - [ ] Proper error handling implemented
-- [ ] Tests written for new functionality
+- [ ] Tests written for new functionality (unit + integration)
 - [ ] Documentation updated
 - [ ] Follows project coding conventions
+- [ ] Confidence scoring system implemented
+- [ ] Auto-fix generation with test patches
+- [ ] Repository integration (GitHub App, webhooks)
+- [ ] CI/CD integration with status checks
 
 ### **User Experience**
-- [ ] Intuitive and responsive UI
-- [ ] Clear error messages
-- [ ] Loading states implemented
-- [ ] Accessibility guidelines followed
+- [ ] Intuitive and responsive UI with RefactorIQ™ branding
+- [ ] Clear error messages and confidence indicators
+- [ ] Loading states and real-time progress updates
+- [ ] Accessibility guidelines followed (WCAG 2.1 AA)
 - [ ] Mobile-friendly design
+- [ ] PR-based workflow integration
+- [ ] One-click apply functionality
+- [ ] Real-time WebSocket updates
+- [ ] Diff viewer with inline suggestions
 
 ### **Performance**
-- [ ] API responses under 200ms
-- [ ] Database queries optimized
+- [ ] API responses under 200ms (p95)
+- [ ] Database queries optimized (< 50ms for complex queries)
 - [ ] Frontend bundle size reasonable
 - [ ] Caching implemented where appropriate
+- [ ] WebSocket first finding < 5s on medium PRs
+- [ ] Worker throughput: 100 concurrent analyses / node
+- [ ] 99.9% uptime with health checks
+- [ ] Rate limiting with Redis sliding window
 
 ### **Security**
-- [ ] Input validation implemented
-- [ ] Authentication required where needed
-- [ ] SQL injection prevented
+- [ ] Input validation implemented with Pydantic v2
+- [ ] Authentication required where needed (JWT with refresh rotation)
+- [ ] SQL injection prevented (SQLAlchemy async)
 - [ ] XSS protection in place
+- [ ] Webhook signature verification (HMAC)
+- [ ] Secrets redaction and encryption (AES-256)
+- [ ] GDPR compliance (data retention, right-to-erasure)
+- [ ] Repository access with least privilege
+- [ ] Rate limiting and CORS protection
 
 ---
 
@@ -420,6 +547,134 @@ This is bad because:
 - "What's the expected user flow for this feature?"
 - "Are there any performance constraints I should consider?"
 - "How should we handle the error case where the AI service is unavailable?"
+
+## 🔧 Patch Protocol
+
+### **Response Format**
+When making code changes, always use this format:
+
+```diff
+// Example: Adding a new API endpoint
++ from fastapi import APIRouter, Depends, HTTPException
++ from app.schemas.analysis import AnalysisCreate, AnalysisResponse
++ from app.services.analysis import AnalysisService
++ 
++ router = APIRouter()
++ 
++ @router.post("/analyses", response_model=AnalysisResponse)
++ async def create_analysis(
++     analysis: AnalysisCreate,
++     service: AnalysisService = Depends()
++ ):
++     """Create a new code analysis."""
++     return await service.create_analysis(analysis)
+```
+
+### **Commit Message Format**
+Use conventional commit messages:
+```
+feat: add user profile update endpoint
+fix: resolve authentication token refresh issue
+docs: update API documentation
+test: add unit tests for analysis service
+refactor: improve error handling in upload service
+```
+
+### **File Creation**
+When creating new files, specify the complete path and content:
+
+```typescript
+// apps/frontend/components/ui/input.tsx
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, ...props }, ref) => {
+    return (
+      <input
+        type={type}
+        className={cn(
+          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          className
+        )}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Input.displayName = "Input"
+
+export { Input }
+```
+
+## 🚨 Failure-Mode Playbook
+
+### **Common Issues and Solutions**
+
+#### **1. Database Connection Issues**
+**Symptoms**: Connection timeout, connection pool exhausted
+**Solutions**:
+- Check database URL and credentials
+- Verify database is running: `docker-compose ps`
+- Check connection pool settings
+- Restart database: `docker-compose restart postgres`
+
+#### **2. AI Service Unavailable**
+**Symptoms**: Analysis fails, API errors
+**Solutions**:
+- Check API keys are valid and have quota
+- Implement fallback to alternative AI service
+- Add retry logic with exponential backoff
+- Cache previous analysis results
+
+#### **3. Frontend Build Failures**
+**Symptoms**: TypeScript errors, missing dependencies
+**Solutions**:
+- Run `pnpm install` to update dependencies
+- Check TypeScript configuration
+- Verify all imports are correct
+- Clear build cache: `pnpm clean`
+
+#### **4. WebSocket Connection Issues**
+**Symptoms**: Real-time updates not working
+**Solutions**:
+- Check WebSocket URL configuration
+- Verify CORS settings
+- Check network connectivity
+- Implement reconnection logic
+
+#### **5. File Upload Failures**
+**Symptoms**: Upload timeout, file size errors
+**Solutions**:
+- Check file size limits
+- Verify storage service credentials
+- Check network connectivity
+- Implement chunked upload for large files
+
+#### **6. Authentication Issues**
+**Symptoms**: Login failures, token expiration
+**Solutions**:
+- Check JWT secret configuration
+- Verify token expiration settings
+- Check refresh token logic
+- Clear browser cache and cookies
+
+### **Debugging Steps**
+1. Check application logs: `docker-compose logs -f [service]`
+2. Verify environment variables are set correctly
+3. Check database migrations: `alembic current`
+4. Test API endpoints: `curl -X GET http://localhost:8000/api/v1/health`
+5. Check frontend console for JavaScript errors
+
+### **Emergency Procedures**
+1. **Service Down**: Restart with `docker-compose restart`
+2. **Database Issues**: Restore from backup or run migrations
+3. **Security Breach**: Rotate all API keys and secrets
+4. **Performance Issues**: Scale up resources or enable caching
 
 ---
 

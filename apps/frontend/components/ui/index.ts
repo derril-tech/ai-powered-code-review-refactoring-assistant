@@ -23,3 +23,19 @@ export type { ToastProps, ToastActionElement } from './toast';
 
 // Toaster
 export { Toaster } from './toaster';
+
+// Input
+export { Input } from './input';
+export type { InputProps } from './input';
+
+// Label
+export { Label } from './label';
+
+// Select
+export {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './select';

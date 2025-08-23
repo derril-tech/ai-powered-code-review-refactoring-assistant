@@ -1,0 +1,414 @@
+openapi: 3.1.0
+info:
+  title: AI Code Review Assistant API
+  description: API for AI-powered code review and analysis
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@aicode-review.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.aicode-review.com
+    description: Production server
+
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check
+      description: Check if the API is running
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+  /api/v1/auth/register:
+    post:
+      summary: Register a new user
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  minLength: 8
+                  example: "securepassword123"
+                name:
+                  type: string
+                  example: "John Doe"
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Invalid input data
+        '409':
+          description: User already exists
+
+  /api/v1/auth/login:
+    post:
+      summary: Login user
+      description: Authenticate user and return access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  example: "securepassword123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: "bearer"
+                  user:
+                    $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Invalid credentials
+
+  /api/v1/analyses:
+    get:
+      summary: List user analyses
+      description: Get all analyses for the authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of analyses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AnalysisResponse'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  pages:
+                    type: integer
+        '401':
+          description: Unauthorized
+
+    post:
+      summary: Create new analysis
+      description: Start a new code analysis
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - repository_url
+              properties:
+                repository_url:
+                  type: string
+                  format: uri
+                  example: "https://github.com/user/repo"
+                branch:
+                  type: string
+                  default: "main"
+                  example: "main"
+                analysis_type:
+                  type: string
+                  enum: [full, security, performance, quality]
+                  default: "full"
+                  example: "full"
+      responses:
+        '201':
+          description: Analysis created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+        '400':
+          description: Invalid input data
+        '401':
+          description: Unauthorized
+
+  /api/v1/analyses/{analysis_id}:
+    get:
+      summary: Get analysis details
+      description: Get detailed information about a specific analysis
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: analysis_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Analysis details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisDetailResponse'
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+
+    delete:
+      summary: Delete analysis
+      description: Delete a specific analysis
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: analysis_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Analysis deleted successfully
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+
+  /api/v1/upload:
+    post:
+      summary: Upload code files
+      description: Upload code files for analysis
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                analysis_type:
+                  type: string
+                  enum: [full, security, performance, quality]
+                  default: "full"
+      responses:
+        '201':
+          description: Files uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+        '400':
+          description: Invalid file format or size
+        '401':
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AnalysisResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        repository_url:
+          type: string
+          format: uri
+        branch:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        total_issues:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AnalysisDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/AnalysisResponse'
+        - type: object
+          properties:
+            issues:
+              type: array
+              items:
+                $ref: '#/components/schemas/IssueResponse'
+            recommendations:
+              type: array
+              items:
+                $ref: '#/components/schemas/RecommendationResponse'
+            completed_at:
+              type: string
+              format: date-time
+
+    IssueResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        file_path:
+          type: string
+        line_number:
+          type: integer
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        category:
+          type: string
+          enum: [security, performance, quality, best_practice]
+        title:
+          type: string
+        description:
+          type: string
+        suggestion:
+          type: string
+        code_snippet:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    RecommendationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high]
+        category:
+          type: string
+          enum: [security, performance, quality, best_practice]
+        created_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
