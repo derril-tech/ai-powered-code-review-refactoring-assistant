@@ -34,7 +34,7 @@ services:
     name: refactoriq-backend
     runtime: python
     region: frankfurt
-    plan: pro-4gb
+    plan: pro
     # Point to your repo (update with your actual repo URL)
     # repo: https://github.com/your-username/your-repo-name
     branch: main
@@ -137,7 +137,7 @@ services:
     name: refactoriq-worker
     runtime: python
     region: frankfurt
-    plan: pro-4gb
+    plan: pro
     # repo: https://github.com/your-username/your-repo-name
     branch: main
     
