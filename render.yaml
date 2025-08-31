@@ -26,7 +26,7 @@ services:
   - type: keyvalue
     name: refactoriq-redis
     region: frankfurt
-    plan: pro-4gb
+    plan: pro
     ipAllowList: []                     # Internal connections only
 
   # FastAPI Backend (Web Service)
