@@ -18,7 +18,6 @@ databases:
     region: frankfurt                   # Change to your preferred region
     plan: starter                       # Adjust based on your needs
     databaseName: code_review_db        # Matches your docker-compose.yml
-    user: postgres                      # Matches your setup
     ipAllowList: []                     # Internal connections only
 
 # ---------- Services ----------
