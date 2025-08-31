@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Activity, 
   GitBranch, 
@@ -20,10 +21,12 @@ import {
   Plus,
   RefreshCw,
   Users,
-  FileText
+  FileText,
+  Wifi
 } from 'lucide-react';
 import apiClient from '@/lib/api';
 import { useWebSocket } from '@/contexts/websocket-context';
+import { ConnectionTest } from '@/components/connection-test';
 
 interface DashboardStats {
   total_analyses: number;
@@ -175,6 +178,17 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
+
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="connection-test">
+              <Wifi className="mr-2 h-4 w-4" />
+              Connection Test
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
 
         {/* Error Alert */}
         {error && (
@@ -398,6 +412,12 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="connection-test">
+            <ConnectionTest />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

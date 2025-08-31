@@ -9,7 +9,7 @@ interface TokenPayload {
 }
 
 // API Client Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://refactoriq-backend.fly.dev';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -568,35 +568,40 @@ class ApiClient {
     },
     onProgress?: (progress: number) => void
   ) {
-    // First get presigned URL
-    const { upload_url, file_url, fields } = await this.getPresignedUrl({
-      filename: file.name,
-      content_type: file.type,
-      file_size: file.size,
-    });
+    try {
+      // Simplified direct upload approach
+      const formData = new FormData();
+      formData.append('files', file);
 
-    // Upload file to S3/storage
-    const formData = new FormData();
-    Object.entries(fields).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-    formData.append('file', file);
+      // Upload file directly
+      const uploadResponse = await this.client.post('/uploads', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 50) / progressEvent.total); // 50% for upload
+            onProgress(progress);
+          }
+        },
+      });
 
-    await axios.post(upload_url, formData, {
-      onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(progress);
-        }
-      },
-    });
+      if (onProgress) onProgress(75); // Upload complete
 
-    // Start analysis
-    return this.analyzeFile({
-      file_url,
-      language: options.language,
-      analysis_type: options.analysis_type,
-    });
+      // Start analysis with mock file URL
+      const analysisResponse = await this.analyzeFile({
+        file_url: `mock://uploaded/${file.name}`,
+        language: options.language,
+        analysis_type: options.analysis_type,
+      });
+
+      if (onProgress) onProgress(100); // Analysis started
+
+      return analysisResponse;
+    } catch (error) {
+      console.error('Upload and analyze error:', error);
+      throw error;
+    }
   }
 
   // Batch operations

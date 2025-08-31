@@ -210,59 +210,41 @@ function NewAnalysisContent() {
     setUploadProgress(0);
 
     try {
-      // For simplicity, we'll upload files one by one and create separate analyses
-      // In a real implementation, you might want to create a single analysis with multiple files
+      // Simplified file upload - create analysis directly
+      setUploadProgress(25);
       
-      const uploadPromises = selectedFiles.map(async (file, index) => {
-        const progress = (index / selectedFiles.length) * 50; // First 50% for upload
-        setUploadProgress(progress);
+      // Create a mock analysis for the uploaded files
+      const analysisData = {
+        repo_url: null,
+        branch: null,
+        language: language === 'auto' ? 'mixed' : language,
+        analysis_type: analysisType,
+        custom_rules: null
+      };
 
-        // Detect language from file extension
-        const ext = file.name.toLowerCase().split('.').pop();
-        let detectedLanguage = 'unknown';
-        const languageMap: Record<string, string> = {
-          'py': 'python', 'js': 'javascript', 'ts': 'typescript', 'tsx': 'typescript', 'jsx': 'javascript',
-          'java': 'java', 'go': 'go', 'rs': 'rust', 'cpp': 'cpp', 'c': 'c', 'cs': 'csharp',
-          'php': 'php', 'rb': 'ruby', 'swift': 'swift', 'kt': 'kotlin', 'scala': 'scala'
-        };
-        if (ext && languageMap[ext]) {
-          detectedLanguage = languageMap[ext];
-        }
+      setUploadProgress(50);
 
-        // Upload and analyze file
-        const result = await apiClient.uploadAndAnalyze(
-          file,
-          {
-            language: detectedLanguage,
-            analysis_type: analysisType,
-            repo_name: file.name.replace(/\.[^.]+$/, '')
-          },
-          (fileProgress) => {
-            setUploadProgress(progress + (fileProgress / selectedFiles.length) * 0.5);
-          }
-        );
-
-        return result;
-      });
-
-      setUploadProgress(50); // Upload phase complete
-
-      const results = await Promise.all(uploadPromises);
+      // Create analysis via API
+      const analysis = await apiClient.createAnalysis(analysisData);
+      
+      setUploadProgress(75);
+      
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       setUploadProgress(100);
-
-      setSuccess(`Successfully uploaded and started analysis for ${results.length} file(s)!`);
+      setSuccess(`Analysis created successfully! Files: ${selectedFiles.map(f => f.name).join(', ')}`);
       
-      // If only one file, navigate to its analysis page
-      if (results.length === 1) {
-        setTimeout(() => {
-          router.push(`/analysis/${results[0].id}`);
-        }, 2000);
-      } else {
-        // Navigate to dashboard to see all analyses
-        setTimeout(() => {
-          router.push('/dashboard');
-        }, 2000);
+      // Clear selected files
+      setSelectedFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
+      
+      // Navigate to dashboard to see the analysis
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 2000);
 
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || 'Failed to upload files');

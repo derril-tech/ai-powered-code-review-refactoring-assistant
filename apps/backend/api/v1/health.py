@@ -14,13 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from pydantic import BaseModel
 
-from app.db.session import get_db
-from app.core.config import get_settings
+from db.session import get_db
+from core.config import settings
 import redis.asyncio as redis
 import logging
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
 router = APIRouter(prefix="/health", tags=["health"])
 

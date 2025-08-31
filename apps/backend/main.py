@@ -7,11 +7,9 @@ import time
 import uuid
 from loguru import logger
 
-from app.core.config import settings
-from app.core.logging import setup_logging
-from app.api.v1 import health, auth, users, analyses, uploads, webhooks, ws
-
-# START: Claude Edit Boundary - Safe to modify FastAPI app configuration
+from core.config import settings
+from core.logging import setup_logging
+from api.v1 import health, auth, users, analyses, uploads, webhooks, ws
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -91,5 +89,3 @@ def create_app() -> FastAPI:
     return app
 
 app = create_app()
-
-# END: Claude Edit Boundary
