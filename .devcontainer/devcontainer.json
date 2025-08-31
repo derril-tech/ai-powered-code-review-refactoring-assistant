@@ -1,0 +1,38 @@
+{
+  "name": "AI Code Review Assistant",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "frontend",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-python.flake8",
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-json",
+        "ms-vscode.vscode-yaml",
+        "ms-vscode.vscode-docker",
+        "ms-vscode.vscode-git",
+        "ms-vscode.vscode-github"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.flake8Enabled": true,
+        "python.formatting.provider": "black",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true
+        },
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "typescript.suggest.autoImports": true
+      }
+    }
+  },
+  "forwardPorts": [3000, 8000, 5432, 6379],
+  "postCreateCommand": "pnpm install && pnpm dev",
+  "remoteUser": "root"
+}

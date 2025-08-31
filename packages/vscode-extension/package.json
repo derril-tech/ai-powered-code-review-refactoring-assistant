@@ -1,0 +1,180 @@
+{
+  "name": "refactor-iq-vscode",
+  "displayName": "RefactorIQ",
+  "description": "AI-powered code analysis and refactoring for VS Code",
+  "version": "1.0.0",
+  "publisher": "refactor-iq",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:refactor-iq.scan",
+    "onCommand:refactor-iq.apply",
+    "onCommand:refactor-iq.diff",
+    "onCommand:refactor-iq.showProposals"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "refactor-iq.scan",
+        "title": "RefactorIQ: Scan Current File",
+        "category": "RefactorIQ"
+      },
+      {
+        "command": "refactor-iq.scanWorkspace",
+        "title": "RefactorIQ: Scan Workspace",
+        "category": "RefactorIQ"
+      },
+      {
+        "command": "refactor-iq.showProposals",
+        "title": "RefactorIQ: Show Proposals",
+        "category": "RefactorIQ"
+      },
+      {
+        "command": "refactor-iq.applyProposal",
+        "title": "RefactorIQ: Apply Proposal",
+        "category": "RefactorIQ"
+      },
+      {
+        "command": "refactor-iq.diff",
+        "title": "RefactorIQ: Show Diff",
+        "category": "RefactorIQ"
+      },
+      {
+        "command": "refactor-iq.goToFinding",
+        "title": "Go to Finding",
+        "category": "RefactorIQ"
+      },
+      {
+        "command": "refactor-iq.refresh",
+        "title": "Refresh",
+        "category": "RefactorIQ",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "refactor-iq.signOut",
+        "title": "Sign Out",
+        "category": "RefactorIQ"
+      },
+      {
+        "command": "refactor-iq.createPr",
+        "title": "Create Pull Request",
+        "category": "RefactorIQ"
+      },
+      {
+        "command": "refactor-iq.applyDirect",
+        "title": "Apply Directly",
+        "category": "RefactorIQ"
+      }
+    ],
+    "configuration": {
+      "title": "RefactorIQ",
+      "properties": {
+        "refactorIq.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "RefactorIQ API URL"
+        },
+        "refactorIq.apiKey": {
+          "type": "string",
+          "description": "RefactorIQ API Key"
+        },
+        "refactorIq.autoScan": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically scan files on save"
+        },
+        "refactorIq.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show notifications for scan results"
+        },
+        "refactorIq.autoApply": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically apply safe proposals"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "refactor-iq",
+          "title": "RefactorIQ",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "refactor-iq": [
+        {
+          "id": "refactor-iq-proposals",
+          "name": "Proposals"
+        },
+        {
+          "id": "refactor-iq-findings",
+          "name": "Findings"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "refactor-iq.refresh",
+          "when": "view == refactor-iq-proposals",
+          "group": "navigation"
+        },
+        {
+          "command": "refactor-iq.refresh",
+          "when": "view == refactor-iq-findings",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "refactor-iq.diff",
+          "when": "view == refactor-iq-proposals && viewItem == proposal",
+          "group": "inline"
+        },
+        {
+          "command": "refactor-iq.applyDirect",
+          "when": "view == refactor-iq-proposals && viewItem == proposal",
+          "group": "proposal@1"
+        },
+        {
+          "command": "refactor-iq.createPr",
+          "when": "view == refactor-iq-proposals && viewItem == proposal",
+          "group": "proposal@2"
+        },
+        {
+          "command": "refactor-iq.goToFinding",
+          "when": "view == refactor-iq-findings && viewItem =~ /finding/",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^16.18.126",
+    "@types/vscode": "^1.103.0",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "eslint": "^8.57.1",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "axios": "^1.11.0"
+  }
+}

@@ -1,0 +1,257 @@
+# ===========================================================
+# Render Blueprint — RefactorIQ™ Full-stack app with:
+# - PostgreSQL (pgvector)
+# - Redis (Key Value)
+# - FastAPI backend (Python / Uvicorn)
+# - Next.js frontend (Node server)
+# - Background worker (Arq)
+# ===========================================================
+
+# Enable Preview Environments for PRs
+previews:
+  generation: automatic
+
+# ---------- PostgreSQL (managed) ----------
+databases:
+  - name: refactoriq-postgres
+    postgresMajorVersion: "15"         # Your init.sql uses pgvector which works well with 15
+    region: frankfurt                   # Change to your preferred region
+    plan: starter                       # Adjust based on your needs
+    databaseName: code_review_db        # Matches your docker-compose.yml
+    user: postgres                      # Matches your setup
+    ipAllowList: []                     # Internal connections only
+
+# ---------- Services ----------
+services:
+  # Redis (Key Value)
+  - type: keyvalue
+    name: refactoriq-redis
+    region: frankfurt
+    plan: starter
+    ipAllowList: []                     # Internal connections only
+
+  # FastAPI Backend (Web Service)
+  - type: web
+    name: refactoriq-backend
+    runtime: python
+    region: frankfurt
+    plan: starter
+    # Point to your repo (update with your actual repo URL)
+    # repo: https://github.com/your-username/your-repo-name
+    branch: main
+    
+    # Build in the backend directory
+    buildCommand: |
+      cd apps/backend
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    
+    # Pre-deploy: Enable pgvector and run migrations
+    preDeployCommand: |
+      cd apps/backend
+      # Enable pgvector extension
+      psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS vector;"
+      # Run Alembic migrations
+      alembic upgrade head
+    
+    # Start the FastAPI server
+    startCommand: |
+      cd apps/backend
+      uvicorn main:app --host 0.0.0.0 --port $PORT
+    
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: commit
+
+    envVars:
+      # Database connection
+      - key: DATABASE_URL
+        fromDatabase:
+          name: refactoriq-postgres
+          property: connectionString
+
+      # Redis connection
+      - key: REDIS_URL
+        fromService:
+          name: refactoriq-redis
+          type: keyvalue
+          property: connectionString
+      
+      # ARQ Redis URL (same as REDIS_URL but with different DB)
+      - key: ARQ_REDIS_URL
+        fromService:
+          name: refactoriq-redis
+          type: keyvalue
+          property: connectionString
+
+      # Security
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+
+      # AI Services (you'll be prompted to set these)
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+      # GitHub OAuth (you'll be prompted to set these)
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+
+      # GitLab OAuth (optional)
+      - key: GITLAB_CLIENT_ID
+        sync: false
+      - key: GITLAB_CLIENT_SECRET
+        sync: false
+
+      # Email Configuration (optional)
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: EMAIL_FROM
+        value: noreply@refactoriq.com
+
+      # Application Settings
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FORMAT
+        value: json
+
+  # Background Worker (Arq)
+  - type: worker
+    name: refactoriq-worker
+    runtime: python
+    region: frankfurt
+    plan: starter
+    # repo: https://github.com/your-username/your-repo-name
+    branch: main
+    
+    buildCommand: |
+      cd apps/backend
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    
+    # Start Arq worker
+    startCommand: |
+      cd apps/backend
+      arq workers.analysis_worker.WorkerSettings
+    
+    maxShutdownDelaySeconds: 120
+
+    envVars:
+      # Database connection
+      - key: DATABASE_URL
+        fromDatabase:
+          name: refactoriq-postgres
+          property: connectionString
+
+      # Redis connection
+      - key: REDIS_URL
+        fromService:
+          name: refactoriq-redis
+          type: keyvalue
+          property: connectionString
+      
+      - key: ARQ_REDIS_URL
+        fromService:
+          name: refactoriq-redis
+          type: keyvalue
+          property: connectionString
+
+      # AI Services
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+      # GitHub OAuth
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+
+      # Application Settings
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+
+  # Next.js Frontend (SSR)
+  - type: web
+    name: refactoriq-frontend
+    runtime: node
+    region: frankfurt
+    plan: starter
+    # repo: https://github.com/your-username/your-repo-name
+    branch: main
+    
+    # Build in the frontend directory
+    buildCommand: |
+      cd apps/frontend
+      npm ci
+      npm run build
+    
+    startCommand: |
+      cd apps/frontend
+      npm start
+    
+    autoDeployTrigger: commit
+    healthCheckPath: /
+
+    envVars:
+      # Point to backend service
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: refactoriq-backend
+          type: web
+          property: hostport
+      
+      # WebSocket URL (same as API URL but with ws://)
+      - key: NEXT_PUBLIC_WS_URL
+        fromService:
+          name: refactoriq-backend
+          type: web
+          property: hostport
+
+      # App configuration
+      - key: NEXT_PUBLIC_APP_URL
+        fromService:
+          name: refactoriq-frontend
+          type: web
+          property: hostport
+      
+      - key: NEXT_PUBLIC_APP_NAME
+        value: "RefactorIQ™"
+      
+      - key: NEXT_PUBLIC_APP_ENV
+        value: production
+
+      # Feature flags
+      - key: NEXT_PUBLIC_ENABLE_DEMO
+        value: "true"
+      - key: NEXT_PUBLIC_ENABLE_ANALYTICS
+        value: "false"
+      - key: NEXT_PUBLIC_ENABLE_SENTRY
+        value: "false"
+
+      # OAuth public IDs (safe for browser)
+      - key: NEXT_PUBLIC_GITHUB_CLIENT_ID
+        sync: false
+      - key: NEXT_PUBLIC_GITLAB_CLIENT_ID
+        sync: false
