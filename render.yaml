@@ -196,7 +196,7 @@ services:
     name: refactoriq-frontend
     runtime: node
     region: frankfurt
-    plan: pro-4gb
+    plan: pro
     # repo: https://github.com/your-username/your-repo-name
     branch: main
     
