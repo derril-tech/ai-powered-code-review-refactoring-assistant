@@ -16,7 +16,7 @@ databases:
   - name: refactoriq-postgres
     postgresMajorVersion: "15"         # Your init.sql uses pgvector which works well with 15
     region: frankfurt                   # Change to your preferred region
-    plan: pro                 # Updated to new plan format
+    plan: pro-4gb                       # Professional tier - 4GB database
     databaseName: code_review_db        # Matches your docker-compose.yml
     ipAllowList: []                     # Internal connections only
 
@@ -26,7 +26,7 @@ services:
   - type: keyvalue
     name: refactoriq-redis
     region: frankfurt
-    plan: pro
+    plan: pro-4gb
     ipAllowList: []                     # Internal connections only
 
   # FastAPI Backend (Web Service)
@@ -34,7 +34,7 @@ services:
     name: refactoriq-backend
     runtime: python
     region: frankfurt
-    plan: pro
+    plan: pro-4gb
     # Point to your repo (update with your actual repo URL)
     # repo: https://github.com/your-username/your-repo-name
     branch: main
@@ -137,7 +137,7 @@ services:
     name: refactoriq-worker
     runtime: python
     region: frankfurt
-    plan: pro
+    plan: pro-4gb
     # repo: https://github.com/your-username/your-repo-name
     branch: main
     
@@ -196,7 +196,7 @@ services:
     name: refactoriq-frontend
     runtime: node
     region: frankfurt
-    plan: pro
+    plan: pro-4gb
     # repo: https://github.com/your-username/your-repo-name
     branch: main
     
