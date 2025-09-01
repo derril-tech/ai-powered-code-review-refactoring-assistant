@@ -97,3 +97,4 @@ class AuditLog(Base, TimestampMixin):
     
     def __repr__(self):
         return f"<AuditLog(id={self.id}, type='{self.event_type}', success={self.success})>"
+

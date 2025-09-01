@@ -239,3 +239,4 @@ async def _get_proposal_by_id(db: AsyncSession, proposal_id: int, user_id: int) 
         return None
 
 
+

@@ -80,3 +80,4 @@ class ProposalListResponse(BaseModel):
     pages: int
 
 
+

@@ -115,3 +115,4 @@ docker-compose exec postgres psql -U postgres -d code_review_db -c "\dt"
 - Check if backend is running on port 8000
 - Verify NEXT_PUBLIC_API_URL in frontend .env.local
 - Check browser console for CORS errors
+

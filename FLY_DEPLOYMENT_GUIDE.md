@@ -147,3 +147,4 @@ flyctl deploy
 # Scale app
 flyctl scale count 2  # Run 2 instances
 ```
+

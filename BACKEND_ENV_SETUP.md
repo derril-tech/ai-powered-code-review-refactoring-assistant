@@ -58,3 +58,4 @@ LOG_FORMAT=json
 - `ANTHROPIC_API_KEY` - For Claude AI (fallback)
 - Email settings - For notifications
 - S3 settings - For file storage (uses local if not set)
+

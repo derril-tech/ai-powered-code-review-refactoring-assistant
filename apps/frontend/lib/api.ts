@@ -18,10 +18,11 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: `${API_BASE_URL}/api/v1`,
-      timeout: 30000,
+      timeout: 60000,
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: false,
     });
 
     this.setupInterceptors();
@@ -46,7 +47,8 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Only try to refresh token if we actually have one
+        if (error.response?.status === 401 && !originalRequest._retry && this.getAccessToken()) {
           originalRequest._retry = true;
 
           try {

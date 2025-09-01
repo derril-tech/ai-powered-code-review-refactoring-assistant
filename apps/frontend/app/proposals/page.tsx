@@ -111,7 +111,19 @@ export default function ProposalsPage() {
         ...(filters.type !== 'all' && { proposal_type: filters.type }),
       };
 
-      const response = await apiClient.getProposals(params);
+      // Use direct fetch instead of apiClient
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, value.toString());
+        }
+      });
+      
+      const fetchResponse = await fetch(`https://refactoriq-backend.fly.dev/api/v1/proposals?${searchParams.toString()}`);
+      if (!fetchResponse.ok) {
+        throw new Error(`HTTP error! status: ${fetchResponse.status}`);
+      }
+      const response = await fetchResponse.json();
       setProposals(response.items);
       setPagination({
         total: response.total,
@@ -137,12 +149,25 @@ export default function ProposalsPage() {
     try {
       setActionLoading(prev => ({ ...prev, [proposalId]: createPr ? 'creating_pr' : 'applying' }));
       
-      const result = await apiClient.applyProposal(proposalId, {
-        auto_apply: !createPr,
-        create_pr: createPr,
-        pr_title: `Fix: ${proposals.find(p => p.id === proposalId)?.title}`,
-        pr_description: proposals.find(p => p.id === proposalId)?.description
+      // Use direct fetch instead of apiClient
+      const applyResponse = await fetch(`https://refactoriq-backend.fly.dev/api/v1/proposals/${proposalId}/apply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          auto_apply: !createPr,
+          create_pr: createPr,
+          pr_title: `Fix: ${proposals.find(p => p.id === proposalId)?.title}`,
+          pr_description: proposals.find(p => p.id === proposalId)?.description
+        })
       });
+      
+      if (!applyResponse.ok) {
+        throw new Error(`HTTP error! status: ${applyResponse.status}`);
+      }
+      
+      const result = await applyResponse.json();
 
       if (result.success) {
         // Update proposal status
@@ -179,7 +204,20 @@ export default function ProposalsPage() {
     try {
       setActionLoading(prev => ({ ...prev, [proposalId]: 'rejecting' }));
       
-      const result = await apiClient.rejectProposal(proposalId, reason);
+      // Use direct fetch instead of apiClient
+      const rejectResponse = await fetch(`https://refactoriq-backend.fly.dev/api/v1/proposals/${proposalId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason })
+      });
+      
+      if (!rejectResponse.ok) {
+        throw new Error(`HTTP error! status: ${rejectResponse.status}`);
+      }
+      
+      const result = await rejectResponse.json();
       
       if (result.success) {
         // Update proposal status
@@ -205,8 +243,12 @@ export default function ProposalsPage() {
       setSelectedProposal(proposal);
       setShowPreview(true);
       
-      // Fetch preview data
-      const preview = await apiClient.getProposalPreview(proposal.id);
+      // Fetch preview data using direct fetch
+      const previewResponse = await fetch(`https://refactoriq-backend.fly.dev/api/v1/proposals/${proposal.id}/preview`);
+      if (!previewResponse.ok) {
+        throw new Error(`HTTP error! status: ${previewResponse.status}`);
+      }
+      const preview = await previewResponse.json();
       setPreviewData(preview);
       
     } catch (error: any) {

@@ -314,3 +314,4 @@ function formatSideBySideDiff(diffResult: DiffResult): string {
 }
 
 
+

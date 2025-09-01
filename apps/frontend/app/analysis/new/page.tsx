@@ -26,13 +26,11 @@ import {
   Loader2
 } from 'lucide-react';
 import apiClient from '@/lib/api';
-import { useWebSocket } from '@/contexts/websocket-context';
 
 function NewAnalysisContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { connect, subscribeToAnalysis } = useWebSocket();
 
   const [analysisType, setAnalysisType] = useState(searchParams.get('type') || 'full');
   const [repositoryUrl, setRepositoryUrl] = useState('');
@@ -48,20 +46,22 @@ function NewAnalysisContent() {
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [repositories, setRepositories] = useState<any[]>([]);
+  const [showRepoSuggestions, setShowRepoSuggestions] = useState(false);
+  const [createdAnalysisId, setCreatedAnalysisId] = useState<number | null>(null);
 
-  // Load repositories on mount
-  useEffect(() => {
-    const loadRepositories = async () => {
-      try {
-        const repos = await apiClient.getRepositories({ size: 100 });
-        setRepositories(repos.items || []);
-      } catch (err) {
-        console.error('Failed to load repositories:', err);
-      }
-    };
+  // Load repositories on mount - disabled for now to avoid network errors
+  // useEffect(() => {
+  //   const loadRepositories = async () => {
+  //     try {
+  //       const repos = await apiClient.getRepositories({ size: 100 });
+  //       setRepositories(repos.items || []);
+  //     } catch (err) {
+  //       console.error('Failed to load repositories:', err);
+  //     }
+  //   };
     
-    loadRepositories();
-  }, []);
+  //   loadRepositories();
+  // }, []);
 
   const analysisTypes = [
     {
@@ -130,7 +130,29 @@ function NewAnalysisContent() {
       setLanguage(detectLanguageFromUrl(url));
       setRepoName(extractRepoName(url));
     }
+    setShowRepoSuggestions(false);
   };
+
+  // Handle GitHub icon click
+  const handleGitHubClick = () => {
+    window.open('https://github.com', '_blank');
+    setShowRepoSuggestions(true);
+  };
+
+  // Handle GitLab icon click
+  const handleGitLabClick = () => {
+    window.open('https://gitlab.com', '_blank');
+    setShowRepoSuggestions(true);
+  };
+
+  // Popular repository suggestions
+  const repoSuggestions = [
+    'https://github.com/facebook/react',
+    'https://github.com/microsoft/vscode',
+    'https://github.com/nodejs/node',
+    'https://github.com/vercel/next.js',
+    'https://gitlab.com/gitlab-org/gitlab',
+  ];
 
   const handleRepositoryAnalysis = async () => {
     if (!repositoryUrl.trim()) {
@@ -148,36 +170,56 @@ function NewAnalysisContent() {
         branch: branch || 'main',
         language: language === 'auto' ? 'mixed' : language,
         analysis_type: analysisType,
-        repo_name: repoName || extractRepoName(repositoryUrl),
       };
 
-      const analysis = await apiClient.createAnalysis(analysisData);
+      console.log('Sending analysis data:', analysisData);
       
-      setSuccess('Analysis started successfully!');
-      
-      // Connect to WebSocket for real-time updates
-      connect(analysis.id);
-      
-      // Subscribe to analysis updates
-      const unsubscribe = subscribeToAnalysis(analysis.id, (message) => {
-        if (message.type === 'done') {
-          setSuccess('Analysis completed successfully!');
-          setTimeout(() => {
-            router.push(`/analysis/${analysis.id}`);
-          }, 2000);
-        } else if (message.type === 'error') {
-          setError(`Analysis failed: ${message.error}`);
-          setIsCreating(false);
-        }
+      // Try direct fetch first to bypass API client issues
+      const response = await fetch('https://refactoriq-backend.fly.dev/api/v1/analyses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(analysisData),
       });
-
-      // Navigate to analysis page after delay
-      setTimeout(() => {
-        router.push(`/analysis/${analysis.id}`);
-      }, 1000);
+      
+      console.log('Response received:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
+      
+      const analysis = await response.json();
+      console.log('Analysis response:', analysis);
+      
+      setSuccess(`Analysis started successfully! Analysis ID: ${analysis.id}`);
+      setCreatedAnalysisId(analysis.id);
+      setIsCreating(false);
+      
+      console.log('Analysis creation completed successfully');
 
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Failed to start analysis');
+      console.error('Analysis error:', err);
+      console.error('Error response:', err.response);
+      console.error('Error message:', err.message);
+      console.error('Error code:', err.code);
+      console.error('Error config:', err.config);
+      
+      let errorMessage = 'Failed to start analysis';
+      
+      if (err.code === 'NETWORK_ERROR' || err.message?.includes('Network Error')) {
+        errorMessage = 'Network error - please check your internet connection and try again';
+      } else if (err.response?.status === 0) {
+        errorMessage = 'Unable to connect to server - please try again later';
+      } else if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       setIsCreating(false);
     }
   };
@@ -215,7 +257,8 @@ function NewAnalysisContent() {
       
       // Create a mock analysis for the uploaded files
       const analysisData = {
-        repo_url: null,
+        // Encode uploaded filenames so backend prompt varies per file set
+        repo_url: `uploaded://${selectedFiles.map(f => f.name).join(',')}`,
         branch: null,
         language: language === 'auto' ? 'mixed' : language,
         analysis_type: analysisType,
@@ -224,8 +267,27 @@ function NewAnalysisContent() {
 
       setUploadProgress(50);
 
-      // Create analysis via API
-      const analysis = await apiClient.createAnalysis(analysisData);
+      console.log('Sending file upload analysis data:', analysisData);
+      
+      // Create analysis via direct fetch (like repository analysis)
+      const response = await fetch('https://refactoriq-backend.fly.dev/api/v1/analyses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(analysisData),
+      });
+      
+      console.log('File upload response received:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('File upload response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
+      
+      const analysis = await response.json();
+      console.log('File upload analysis response:', analysis);
       
       setUploadProgress(75);
       
@@ -234,20 +296,17 @@ function NewAnalysisContent() {
       
       setUploadProgress(100);
       setSuccess(`Analysis created successfully! Files: ${selectedFiles.map(f => f.name).join(', ')}`);
+      setCreatedAnalysisId(analysis.id);
       
       // Clear selected files
       setSelectedFiles([]);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      
-      // Navigate to dashboard to see the analysis
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 2000);
 
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Failed to upload files');
+      setError(err.message || 'Failed to upload files');
+      console.error('File upload error:', err);
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -296,7 +355,27 @@ function NewAnalysisContent() {
         {success && (
           <Alert className="mb-6 max-w-4xl mx-auto" variant="default">
             <CheckCircle className="h-4 w-4" />
-            <AlertDescription>{success}</AlertDescription>
+            <AlertDescription>
+              {success}
+              {createdAnalysisId && (
+                <div className="mt-3">
+                  <Button 
+                    onClick={() => router.push(`/analysis/${createdAnalysisId}`)}
+                    size="sm"
+                    className="mr-2"
+                  >
+                    View Analysis Results
+                  </Button>
+                  <Button 
+                    onClick={() => router.push('/dashboard')}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Go to Dashboard
+                  </Button>
+                </div>
+              )}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -323,16 +402,53 @@ function NewAnalysisContent() {
                     onChange={(e) => handleRepositoryUrlChange(e.target.value)}
                     disabled={isCreating}
                   />
-                  <Button variant="outline" size="icon" disabled>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={handleGitHubClick}
+                    title="Open GitHub to browse repositories"
+                  >
                     <Github className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" size="icon" disabled>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={handleGitLabClick}
+                    title="Open GitLab to browse repositories"
+                  >
                     <Gitlab className="w-4 h-4" />
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Supports public repositories from GitHub, GitLab, and other Git providers
                 </p>
+                
+                {/* Repository Suggestions */}
+                {showRepoSuggestions && (
+                  <div className="mt-2 p-3 bg-muted rounded-lg border">
+                    <p className="text-sm font-medium mb-2">Popular repositories to try:</p>
+                    <div className="space-y-1">
+                      {repoSuggestions.map((repo, index) => (
+                        <button
+                          key={index}
+                          className="block w-full text-left text-sm text-muted-foreground hover:text-foreground hover:bg-background rounded px-2 py-1 transition-colors"
+                          onClick={() => {
+                            handleRepositoryUrlChange(repo);
+                            setShowRepoSuggestions(false);
+                          }}
+                        >
+                          {repo}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      className="text-xs text-muted-foreground hover:text-foreground mt-2"
+                      onClick={() => setShowRepoSuggestions(false)}
+                    >
+                      Hide suggestions
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

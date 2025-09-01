@@ -55,3 +55,4 @@ echo "📋 Next steps:"
 echo "1. Set your secrets using the commands above"
 echo "2. Update your Vercel frontend's NEXT_PUBLIC_API_BASE_URL to: https://refactoriq-backend.fly.dev"
 echo "3. Test your API endpoints"
+

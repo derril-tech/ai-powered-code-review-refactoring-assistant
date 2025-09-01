@@ -336,3 +336,4 @@ class ProposalService:
         return mapping.get(finding_type, ProposalType.CODE_QUALITY)
 
 
+

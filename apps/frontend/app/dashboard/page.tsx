@@ -52,7 +52,12 @@ export default function DashboardPage() {
   const loadDashboardData = async () => {
     try {
       setError(null);
-      const dashboardStats = await apiClient.getDashboardStats();
+      // Use direct fetch instead of apiClient
+      const response = await fetch('https://refactoriq-backend.fly.dev/api/v1/stats/dashboard');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const dashboardStats = await response.json();
       setStats(dashboardStats);
       setRecentAnalyses(dashboardStats.recent_analyses || []);
     } catch (err: any) {

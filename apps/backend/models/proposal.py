@@ -68,3 +68,4 @@ class Proposal(Base, TimestampMixin):
         return f"<Proposal(id={self.id}, type='{self.proposal_type}', confidence={self.confidence_score})>"
 
 
+

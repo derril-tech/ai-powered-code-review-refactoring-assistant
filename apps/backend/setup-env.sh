@@ -77,3 +77,4 @@ echo "🔍 Your current configuration:"
 echo "Database: Supabase PostgreSQL"
 echo "Redis: Upstash"
 echo "Environment: Production"
+

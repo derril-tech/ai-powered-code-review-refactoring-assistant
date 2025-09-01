@@ -27,7 +27,6 @@ import {
   ExternalLink
 } from 'lucide-react';
 import apiClient from '@/lib/api';
-import { useWebSocket } from '@/contexts/websocket-context';
 
 interface Analysis {
   id: number;
@@ -64,7 +63,6 @@ export default function AnalysisDetailPage() {
   const router = useRouter();
   const params = useParams();
   const analysisId = parseInt(params.id as string);
-  const { connect, subscribeToAnalysis } = useWebSocket();
 
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
@@ -75,23 +73,6 @@ export default function AnalysisDetailPage() {
   useEffect(() => {
     if (analysisId) {
       loadAnalysisData();
-      
-      // Connect to WebSocket for real-time updates
-      connect(analysisId);
-      
-      // Subscribe to analysis updates
-      const unsubscribe = subscribeToAnalysis(analysisId, (message) => {
-        if (message.type === 'progress') {
-          setAnalysis(prev => prev ? { ...prev, progress: message.progress } : null);
-        } else if (message.type === 'done') {
-          loadAnalysisData();
-        } else if (message.type === 'finding') {
-          // Add new finding to the list
-          setFindings(prev => [...prev, message.finding]);
-        }
-      });
-
-      return unsubscribe;
     }
   }, [analysisId]);
 
@@ -99,18 +80,23 @@ export default function AnalysisDetailPage() {
     try {
       setError(null);
       
-      // Load analysis details
-      const analysisData = await apiClient.getAnalysis(analysisId);
+      // Load analysis details using direct fetch
+      const response = await fetch(`https://refactoriq-backend.fly.dev/api/v1/analyses/${analysisId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const analysisData = await response.json();
       setAnalysis(analysisData);
       
-      // Load findings if analysis is completed
-      if (analysisData.status === 'completed') {
-        const findingsData = await apiClient.getAnalysisFindings(analysisId);
-        setFindings(findingsData.items || []);
+      // If backend returns findings in future, set them here. No mock data.
+      if (Array.isArray(analysisData.findings)) {
+        setFindings(analysisData.findings);
       }
       
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Failed to load analysis');
+      setError(err.message || 'Failed to load analysis');
       console.error('Failed to load analysis:', err);
     } finally {
       setLoading(false);
@@ -125,11 +111,11 @@ export default function AnalysisDetailPage() {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'text-red-600 bg-red-50 border-red-200';
-      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'low': return 'text-blue-600 bg-blue-50 border-blue-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'critical': return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-800';
+      case 'high': return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/50 border-orange-200 dark:border-orange-800';
+      case 'medium': return 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950/50 border-yellow-200 dark:border-yellow-800';
+      case 'low': return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800';
+      default: return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/50 border-gray-200 dark:border-gray-800';
     }
   };
 
@@ -146,7 +132,7 @@ export default function AnalysisDetailPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>;
+        return <Badge variant="default" className="bg-green-500 dark:bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>;
       case 'processing':
         return <Badge variant="secondary"><Activity className="w-3 h-3 mr-1" />Processing</Badge>;
       case 'failed':
@@ -300,7 +286,7 @@ export default function AnalysisDetailPage() {
               <CardContent>
                 {findings.length === 0 ? (
                   <div className="text-center py-8">
-                    <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
+                    <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500 dark:text-green-400" />
                     <h3 className="font-semibold mb-2">No issues found!</h3>
                     <p className="text-muted-foreground">
                       Your code looks great. No critical issues were detected.
@@ -409,19 +395,19 @@ export default function AnalysisDetailPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Critical:</span>
-                  <span className="font-semibold text-red-600">{analysis.critical_findings}</span>
+                  <span className="font-semibold text-red-600 dark:text-red-400">{analysis.critical_findings}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">High:</span>
-                  <span className="font-semibold text-orange-600">{analysis.high_findings}</span>
+                  <span className="font-semibold text-orange-600 dark:text-orange-400">{analysis.high_findings}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Medium:</span>
-                  <span className="font-semibold text-yellow-600">{analysis.medium_findings}</span>
+                  <span className="font-semibold text-yellow-600 dark:text-yellow-400">{analysis.medium_findings}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Low:</span>
-                  <span className="font-semibold text-blue-600">{analysis.low_findings}</span>
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">{analysis.low_findings}</span>
                 </div>
               </CardContent>
             </Card>

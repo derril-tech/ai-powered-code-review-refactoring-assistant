@@ -211,3 +211,4 @@ function getAnalysisPatterns(extension: string) {
 }
 
 
+

@@ -34,3 +34,4 @@ primary_region = "fra"  # Frankfurt (change to your preferred region)
 [[mounts]]
   source = "data"
   destination = "/data"
+
